@@ -1,2 +1,5 @@
 all:
-	g++ -std=c++17 maze.cpp -o maze
+	g++ -std=c++17 src/main.cpp -o maze
+
+clean:
+	rm -f maze

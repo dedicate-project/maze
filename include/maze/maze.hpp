@@ -1,104 +1,21 @@
-#include <algorithm>
-#include <cmath>
-#include <cstdlib>
-#include <ctime>
-#include <functional>
-#include <iostream>
-#include <memory>
+#ifndef MAZE_MAZE_HPP_
+#define MAZE_MAZE_HPP_
+
+// Standard
 #include <queue>
 #include <random>
-#include <string>
 #include <unordered_set>
 #include <vector>
 
-struct Coordinates {
-  int row;
-  int col;
+// Private
+#include "coordinates.hpp"
+#include "player.hpp"
+#include "tiles.hpp"
 
-  bool operator==(const Coordinates& other) const {
-    return other.row == row && other.col == col;
-  }
-
-  bool operator!=(const Coordinates& other) const {
-    return other.row != row || other.col != col;
-  }
-
-  bool operator<(const Coordinates &other) const {
-    return (row < other.row) || (row == other.row && col < other.col);
-  }
-};
-
-namespace std {
-  template <>
-  struct hash<Coordinates> {
-    size_t operator()(const Coordinates &c) const {
-      return hash<int>()(c.row) ^ (hash<int>()(c.col) << 1);
-    }
-  };
-}
-
-class Tile {
-public:
-  virtual bool isPassable() const = 0;
-  virtual std::unique_ptr<Tile> clone() const = 0;
-  virtual ~Tile() = default;
-};
-
-class EmptyTile : public Tile {
-public:
-  bool isPassable() const override { return true; }
-  std::unique_ptr<Tile> clone() const override { return std::make_unique<EmptyTile>(*this); }
-};
-
-class WallTile : public Tile {
-public:
-  bool isPassable() const override { return false; }
-  std::unique_ptr<Tile> clone() const override { return std::make_unique<WallTile>(*this); }
-};
-
-class DoorTile : public Tile {
-public:
-  bool isPassable() const override { return true; }
-  std::unique_ptr<Tile> clone() const override { return std::make_unique<DoorTile>(*this); }
-};
-
-class FoodTile : public Tile {
-public:
-  FoodTile(int weight) : weight(weight) {}
-
-  bool isPassable() const override { return true; }
-  int getWeight() const { return weight; }
-  std::unique_ptr<Tile> clone() const override { return std::make_unique<FoodTile>(*this); }
-
-private:
-  int weight;
-};
-
-class Player {
- public:
-  Player(int maxWeight) : maxWeight(maxWeight), currentWeight(0) {}
-
-  void pickFood(int weight) {
-    currentWeight += weight;
-    if (currentWeight > maxWeight) currentWeight = maxWeight - weight;
-  }
-
-  bool consumeFood(int amount) {
-    currentWeight -= amount;
-    return currentWeight > 0;
-  }
-
-  int getCurrentFood() const {
-    return currentWeight;
-  }
-
- private:
-  int maxWeight;
-  int currentWeight;
-};
+namespace maze {
 
 class Maze {
-public:
+ public:
   enum class Move { LEFT, RIGHT, UP, DOWN };
 
   Maze(int rows, int cols, float difficulty)
@@ -411,91 +328,6 @@ public:
   Coordinates playerPos;
 };
 
-void printMaze(const Maze &maze) {
-  int rows = maze.getRows();
-  int cols = maze.getCols();
+}  // namespace maze
 
-  std::cout << "Maze:\n";
-  for (int i = 0; i < rows; i++) {
-    for (int j = 0; j < cols; j++) {
-      if (maze.isPlayerAt(i, j)) {
-        std::cout << "X";
-      } else if (maze.isStartAt(i, j)) {
-        std::cout << "o";
-      } else if (maze.isEndAt(i, j)) {
-        std::cout << "O";
-      } else if (maze.getTile(i, j).isPassable()) {
-        if (dynamic_cast<FoodTile *>(&maze.getTile(i, j))) {
-          std::cout << "F";
-        } else if (dynamic_cast<DoorTile *>(&maze.getTile(i, j))) {
-          std::cout << "D";
-        } else {
-          std::cout << ".";
-        }
-      } else {
-        std::cout << "#";
-      }
-    }
-    std::cout << "\n";
-  }
-  std::cout << "\n";
-}
-
-Maze getSolvableMaze(uint32_t rows, uint32_t cols, float difficulty, uint32_t max_tries) {
-  srand(time(0));
-  uint32_t tries = 0;
-
-  do {
-    Maze maze(rows, cols, difficulty);
-    printMaze(maze);
-    if (maze.isSolvable()) {
-      return maze;
-    }
-    tries++;
-  } while(tries < max_tries);
-
-  throw std::runtime_error(std::string("Failed to generate a solvable maze with these parameters: ")
-                           + "rows=" + std::to_string(rows) + ", cols=" + std::to_string(cols)
-                           + ", difficulty=" + std::to_string(difficulty)
-                           + ", max_tries=" + std::to_string(max_tries));
-}
-
-std::string moveToString(Maze::Move move) {
-  switch (move) {
-  case Maze::Move::LEFT:
-    return "LEFT";
-  case Maze::Move::RIGHT:
-    return "RIGHT";
-  case Maze::Move::UP:
-    return "UP";
-  case Maze::Move::DOWN:
-    return "DOWN";
-  }
-  return "<>";
-}
-
-int main() {
-  Maze maze = getSolvableMaze(20, 20, 0.2, 10);
-  printMaze(maze);
-
-  auto path = maze.solve();
-  for (const auto &move : path) {
-    std::cout << moveToString(move) << std::endl;
-  }
-
-  for (const auto &move : path) {
-    if (!maze.movePlayer(move)) {
-      std::cout << "Game over: Out of food!\n";
-      break;
-    }
-
-    //printMaze(maze);
-
-    if (maze.isFinished()) {
-      std::cout << "Congratulations, you reached the end of the maze!\n";
-      break;
-    }
-  }
-
-  return 0;
-}
+#endif  // MAZE_MAZE_HPP_
