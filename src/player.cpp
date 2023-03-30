@@ -1,4 +1,4 @@
-#include "../include/maze/player.hpp"
+#include <maze/player.hpp>
 
 namespace maze {
 

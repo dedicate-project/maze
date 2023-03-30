@@ -1,4 +1,4 @@
-#include "../include/maze/tiles.hpp"
+#include <maze/tiles.hpp>
 
 namespace maze {
 

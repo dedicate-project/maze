@@ -2,7 +2,7 @@
 #include <iostream>
 
 // Maze
-#include "../include/maze/maze.hpp"
+#include <maze/maze.hpp>
 
 void printMaze(const maze::Maze &maze) {
   int rows = maze.getRows();
