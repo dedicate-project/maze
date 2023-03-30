@@ -1,9 +1,14 @@
 cmake_minimum_required(VERSION 3.8)
-
-project(maze)
+project(maze
+  LANGUAGES CXX
+  VERSION 0.0.1
+  DESCRIPTION "Maze generator, simulator, and solver"
+  HOMEPAGE_URL "https://github.com/dedicate-project/maze/")
 
 # Set C++17 standard
 set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
 # Add include directory to include path
 include_directories(include)
