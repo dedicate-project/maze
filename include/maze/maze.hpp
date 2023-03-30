@@ -1,3 +1,8 @@
+/**
+ * @file maze.hpp
+ * @brief Defines the Maze class used in the maze game.
+ */
+
 #ifndef MAZE_MAZE_HPP_
 #define MAZE_MAZE_HPP_
 
@@ -14,320 +19,147 @@
 
 namespace maze {
 
+/**
+ * @brief The Maze class represents the maze in the maze game.
+ */
 class Maze {
  public:
+  /**
+   * @brief The possible moves that the player can make.
+   */
   enum class Move { LEFT, RIGHT, UP, DOWN };
 
-  Maze(int rows, int cols, float difficulty)
-    : rows(rows), cols(cols), player(100) {
-    grid.resize(rows * cols);
-    generateMaze(difficulty);
-  }
+  /**
+   * @brief Constructs a new Maze with the given number of rows, columns, and difficulty.
+   * @param rows The number of rows in the maze.
+   * @param cols The number of columns in the maze.
+   * @param difficulty The difficulty of the maze, represented as a value between 0 and 1.
+   */
+  Maze(int rows, int cols, float difficulty);
 
-  bool movePlayer(Move move) {
-    // Calculate the new position based on the move.
-    Coordinates newPos = playerPos;
-    switch (move) {
-    case Move::LEFT:
-      newPos.col--;
-      break;
-    case Move::RIGHT:
-      newPos.col++;
-      break;
-    case Move::UP:
-      newPos.row--;
-      break;
-    case Move::DOWN:
-      newPos.row++;
-      break;
-    }
+  /**
+   * @brief Moves the player in the specified direction.
+   * @param move The direction to move the player.
+   * @return True if the move was successful, false otherwise.
+   */
+  bool movePlayer(Move move);
 
-    // Check if the new position is within bounds and passable.
-    if (newPos.row >= 0 && newPos.row < rows && newPos.col >= 0 && newPos.col < cols &&
-        grid[newPos.row * cols + newPos.col]->isPassable()) {
-      auto tile = grid[newPos.row * cols + newPos.col].get();
+  /**
+   * @brief Returns whether or not the maze has been completed.
+   * @return True if the maze has been completed, false otherwise.
+   */
+  bool isFinished() const;
 
-      // Handle special tiles.
-      if (FoodTile *foodTile = dynamic_cast<FoodTile *>(tile)) {
-        player.pickFood(foodTile->getWeight());
-        grid[newPos.row * cols + newPos.col] = std::make_unique<EmptyTile>();
-      }
+  /**
+   * @brief Returns the tile at the specified position in the maze.
+   * @param row The row of the tile to retrieve.
+   * @param col The column of the tile to retrieve.
+   * @return A reference to the tile at the specified position.
+   */
+  Tile& getTile(int row, int col) const;
 
-      // Move the player and consume food.
-      playerPos = newPos;
-      return player.consumeFood(1);
-    }
+  /**
+   * @brief Returns whether or not the player is at the specified position in the maze.
+   * @param row The row to check.
+   * @param col The column to check.
+   * @return True if the player is at the specified position, false otherwise.
+   */
+  bool isPlayerAt(int row, int col) const;
 
-    return true;
-  }
+  /**
+   * @brief Returns whether or not the start of the maze is at the specified position.
+   * @param row The row to check.
+   * @param col The column to check.
+   * @return True if the start of the maze is at the specified position, false otherwise.
+   */
+  bool isStartAt(int row, int col) const;
 
-  bool isFinished() const { return playerPos == endPos; }
+  /**
+   * @brief Returns whether or not the end of the maze is at the specified position.
+   * @param row The row to check.
+   * @param col The column to check.
+   * @return True if the end of the maze is at the specified position, false otherwise.
+   */
+  bool isEndAt(int row, int col) const;
 
-  Tile &getTile(int row, int col) const {
-    return *grid[row * cols + col];
-  }
+  /**
+   * @brief Returns whether or not the specified position is within the bounds of the maze.
+   * @param row The row to check.
+   * @param col The column to check.
+   * @return True if the position is within the bounds of the maze, false otherwise.
+   */
+  bool isInBounds(int row, int col) const;
 
-  bool isPlayerAt(int row, int col) const {
-    return row == playerPos.row && col == playerPos.col;
-  }
+  /**
+   * @brief Returns the number of rows in the maze.
+   * @return The number of rows in the maze.
+   */
+  int getRows() const;
 
-  bool isStartAt(int row, int col) const {
-    return row == startPos.row && col == startPos.col;
-  }
+  /**
+   * @brief Returns the number of columns in the maze.
+   * @return The number of columns in the maze.
+   */
+  int getCols() const;
 
-  bool isEndAt(int row, int col) const {
-    return row == endPos.row && col == endPos.col;
-  }
+  /**
+   * @brief Returns the current amount of food in the player's inventory.
+   * @return The current amount of food in the player's inventory.
+   */
+  int getPlayerCurrentFood() const;
 
-  bool isInBounds(int row, int col) const {
-    return row >= 0 && row < rows && col >= 0 && col < cols;
-  }
+  /**
+   * @brief Determines whether or not the maze is solvable.
+   * @return True if the maze is solvable, false otherwise.
+   */
+  bool isSolvable();
 
-  int getRows() const {
-    return rows;
-  }
-
-  int getCols() const {
-    return cols;
-  }
-
-  int getPlayerCurrentFood() const {
-    return player.getCurrentFood();
-  }
-
-  bool isSolvable() {
-    try {
-      solve();
-      return true;
-    } catch (const std::runtime_error &) {
-      return false;
-    }
-  }
-
-  std::vector<Move> solve() {
-  // Deep copy grid
-  std::vector<std::unique_ptr<Tile>> localGrid;
-  for (const auto &tile : grid) {
-    localGrid.push_back(tile->clone());
-  }
-  
-  // Create a local player
-  Player localPlayer = player;
-  
-  // Use local versions of playerPos and startPos
-  Coordinates localPlayerPos = playerPos;
-  Coordinates startPos = localPlayerPos;
-
-  // Rest of the code remains the same, but replace player with localPlayer
-  std::priority_queue<std::pair<int, Coordinates>, std::vector<std::pair<int, Coordinates>>, std::greater<>> openSet;
-  std::unordered_set<Coordinates, std::hash<Coordinates>> closedSet;
-  std::unordered_map<Coordinates, Coordinates, std::hash<Coordinates>> cameFrom;
-  std::unordered_map<Coordinates, int, std::hash<Coordinates>> gScore;
-  std::unordered_map<Coordinates, int, std::hash<Coordinates>> foodMap;
-
-  openSet.push({manhattanDistance(startPos, endPos) + localPlayer.getCurrentFood(), startPos});
-  gScore[startPos] = 0;
-  foodMap[startPos] = localPlayer.getCurrentFood();
-
-  while (!openSet.empty()) {
-    Coordinates current = openSet.top().second;
-    openSet.pop();
-
-    if (current == endPos) {
-      std::vector<Move> path;
-      while (cameFrom.count(current) > 0) {
-        Coordinates previous = cameFrom[current];
-        path.push_back(getMoveFromCoords(previous, current));
-        current = previous;
-      }
-
-      std::reverse(path.begin(), path.end());
-      return path;
-    }
-
-    if (closedSet.count(current) > 0) {
-      continue;
-    }
-
-    closedSet.insert(current);
-
-    for (const auto &neighbor : getNeighbors(current)) {
-      if (closedSet.count(neighbor) == 0) {
-        int tentativeGScore = gScore[current] + 1;
-        int food = foodMap[current] - 1;
-
-        auto tile = localGrid[neighbor.row * cols + neighbor.col].get();
-        if (FoodTile *foodTile = dynamic_cast<FoodTile *>(tile)) {
-          food += foodTile->getWeight();
-        }
-
-        if (food <= 0) {
-          continue;
-        }
-
-        if (gScore.count(neighbor) == 0 || tentativeGScore < gScore[neighbor]) {
-          cameFrom[neighbor] = current;
-          gScore[neighbor] = tentativeGScore;
-          foodMap[neighbor] = food;
-          int fScore = tentativeGScore + manhattanDistance(neighbor, endPos) + food;
-          openSet.push({fScore, neighbor});
-        }
-      }
-    }
-  }
-
-  throw std::runtime_error("Maze is not solvable");
-}
+  /**
+   * @brief Solves the maze and returns a vector of moves to get from start to end.
+   * @return A vector of moves to get from start to end.
+   */
+  std::vector<Move> solve();
 
  private:
-  Move getMoveFromCoords(const Coordinates &from, const Coordinates &to) {
-    if (from.row == to.row) {
-      if (from.col < to.col) {
-        return Move::RIGHT;
-      } else {
-        return Move::LEFT;
-      }
-    } else {
-      if (from.row < to.row) {
-        return Move::DOWN;
-      } else {
-        return Move::UP;
-      }
-    }
-  }
+  /**
+   * @brief Returns the move that goes from the "from" position to the "to" position.
+   * @param from The starting position.
+   * @param to The ending position.
+   * @return The move that goes from the "from" position to the "to" position.
+   */
+  Move getMoveFromCoords(const Coordinates &from, const Coordinates &to);
 
-  void generateMaze(float difficulty) {
-    // Fill the grid with wall tiles.
-    for (int i = 0; i < rows; i++) {
-        for (int j = 0; j < cols; j++) {
-          if (j == 0 || i == 0 || j == cols - 1 || i == rows - 1) {
-            grid[i * cols + j] = std::make_unique<WallTile>();
-          } else {
-            grid[i * cols + j] = std::make_unique<EmptyTile>();
-          }
-        }
-    }
+  /**
+   * @brief Generates the maze with the specified difficulty.
+   * @param difficulty The difficulty of the maze, represented as a value between 0 and 1.
+   */
+  void generateMaze(float difficulty);
 
-    // Lambda function for recursive depth-first search maze generation.
-    std::function<void(int, int)> dfs = [&](int row, int col) {
-                                          // Set the current cell as an empty tile.
-                                          grid[row * cols + col] = std::make_unique<EmptyTile>();
+  /**
+   * @brief Returns a vector of the neighboring positions of the specified position.
+   * @param pos The position to find neighbors for.
+   * @return A vector of the neighboring positions of the specified position.
+   */
+  std::vector<Coordinates> getNeighbors(const Coordinates &pos);
 
-                                          // Randomly choose the order in which to visit neighbors.
-                                          std::vector<std::pair<int, int>> neighbors = {{-2, 0}, {2, 0}, {0, -2}, {0, 2}};
-                                          std::shuffle(neighbors.begin(), neighbors.end(), std::mt19937(std::random_device()()));
+  /**
+   * @brief Returns the Manhattan distance between two positions.
+   * @param a The first position.
+   * @param b The second position.
+   * @return The Manhattan distance between the two positions.
+   */
+  int manhattanDistance(const Coordinates &a, const Coordinates &b);
 
-                                          // Visit neighbors.
-                                          for (const auto &[dr, dc] : neighbors) {
-                                            int newRow = row + dr;
-                                            int newCol = col + dc;
-                                            if (newRow > 0 && newRow < rows - 1 && newCol > 0 && newCol < cols - 1 && dynamic_cast<WallTile *>(&getTile(newRow, newCol))) {
-                                              // Remove the wall between cells.
-                                              grid[(row + newRow) / 2 * cols + (col + newCol) / 2] = std::make_unique<EmptyTile>();
-
-                                              // Continue generating the maze from the neighbor.
-                                              dfs(newRow, newCol);
-                                            }
-                                          }
-                                        };
-
-    // Generate the maze layout.
-    dfs(1, 1);
-
-    // Add random walls based on the difficulty.
-    int numWallsToAdd = static_cast<int>(difficulty * (rows - 2) * (cols - 2) / 5);
-    for (int i = 0; i < numWallsToAdd; i++) {
-        int row = 1 + rand() % (rows - 2);
-        int col = 1 + rand() % (cols - 2);
-        if (dynamic_cast<EmptyTile *>(&getTile(row, col))) {
-            grid[row * cols + col] = std::make_unique<WallTile>();
-        }
-    }
-
-    // Place special tiles.
-    int numFoodItems = static_cast<int>((1 - difficulty) * (rows - 2) * (cols - 2) / 5);
-    for (int i = 0; i < numFoodItems; i++) {
-        int row, col;
-        do {
-            row = 1 + rand() % (rows - 2);
-            col = 1 + rand() % (cols - 2);
-        } while (!dynamic_cast<EmptyTile *>(&getTile(row, col)));
-        grid[row * cols + col] = std::make_unique<FoodTile>(10 + rand() % 11);
-    }
-
-    // Place random doors based on difficulty.
-    int numDoors = static_cast<int>(difficulty * (rows + cols) / 4);
-    for (int i = 0; i < numDoors; i++) {
-        int row, col;
-        do {
-            row = 1 + rand() % (rows - 2);
-            col = 1 + rand() % (cols - 2);
-        } while (!dynamic_cast<EmptyTile *>(&getTile(row, col)));
-        grid[row * cols + col] = std::make_unique<DoorTile>();
-    }
-
-    // Set random start and end positions on outer walls (excluding corners).
-    std::vector<Coordinates> candidatePositions;
-    for (int col = 1; col < cols - 1; col++) {
-      candidatePositions.push_back({0, col});
-      candidatePositions.push_back({rows - 1, col});
-    }
-    for (int row = 1; row < rows - 1; row++) {
-      candidatePositions.push_back({row, 0});
-      candidatePositions.push_back({row, cols - 1});
-    }
-
-    // Shuffle candidate positions.
-    std::shuffle(candidatePositions.begin(), candidatePositions.end(), std::mt19937(std::random_device()()));
-
-    startPos = {0, 0};
-    endPos = {0, 0};
-
-    // Assign start and end positions.
-    for (const auto& pos : candidatePositions) {
-      if (startPos.row == 0 && startPos.col == 0 && dynamic_cast<WallTile*>(&getTile(pos.row, pos.col))) {
-        startPos = pos;
-        grid[startPos.row * cols + startPos.col] = std::make_unique<EmptyTile>();
-      } else if (endPos.row == 0 && endPos.col == 0 && dynamic_cast<WallTile*>(&getTile(pos.row, pos.col)) && pos != startPos) {
-        endPos = pos;
-        grid[endPos.row * cols + endPos.col] = std::make_unique<EmptyTile>();
-        break;
-      }
-    }
-
-    // Place the player at the start position.
-    playerPos = startPos;
-  }
-
-  std::vector<Coordinates> getNeighbors(const Coordinates &pos) {
-    std::vector<Coordinates> neighbors;
-    std::vector<std::pair<int, int>> directions = {{-1, 0}, {1, 0}, {0, -1}, {0, 1}};
-
-    for (const auto &[dr, dc] : directions) {
-      int newRow = pos.row + dr;
-      int newCol = pos.col + dc;
-
-      if (isInBounds(newRow, newCol) && getTile(newRow, newCol).isPassable()) {
-        neighbors.push_back({newRow, newCol});
-      }
-    }
-
-    return neighbors;
-  }
-
-  int manhattanDistance(const Coordinates &a, const Coordinates &b) {
-    return std::abs(a.row - b.row) + std::abs(a.col - b.col);
-  }
-
-  int rows;
-  int cols;
-  std::vector<std::unique_ptr<Tile>> grid;
-  Player player;
-  Coordinates startPos;
-  Coordinates endPos;
-  Coordinates playerPos;
+  int rows; /**< The number of rows in the maze. */
+  int cols; /**< The number of columns in the maze. */
+  std::vector<std::unique_ptr<Tile>> grid; /**< The grid of tiles that make up the maze. */
+  Player player; /**< The player object. */
+  Coordinates startPos; /**< The starting position of the maze. */
+  Coordinates endPos; /**< The ending position of the maze. */
+  Coordinates playerPos; /**< The current position of the player in the maze. */
 };
 
 }  // namespace maze
 
 #endif  // MAZE_MAZE_HPP_
+
