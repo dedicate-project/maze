@@ -40,22 +40,26 @@ namespace std {
 class Tile {
 public:
   virtual bool isPassable() const = 0;
+  virtual std::unique_ptr<Tile> clone() const = 0;
   virtual ~Tile() = default;
 };
 
 class EmptyTile : public Tile {
 public:
   bool isPassable() const override { return true; }
+  std::unique_ptr<Tile> clone() const override { return std::make_unique<EmptyTile>(*this); }
 };
 
 class WallTile : public Tile {
 public:
   bool isPassable() const override { return false; }
+  std::unique_ptr<Tile> clone() const override { return std::make_unique<WallTile>(*this); }
 };
 
 class DoorTile : public Tile {
 public:
   bool isPassable() const override { return true; }
+  std::unique_ptr<Tile> clone() const override { return std::make_unique<DoorTile>(*this); }
 };
 
 class FoodTile : public Tile {
@@ -64,6 +68,7 @@ public:
 
   bool isPassable() const override { return true; }
   int getWeight() const { return weight; }
+  std::unique_ptr<Tile> clone() const override { return std::make_unique<FoodTile>(*this); }
 
 private:
   int weight;
@@ -128,6 +133,7 @@ public:
       // Handle special tiles.
       if (FoodTile *foodTile = dynamic_cast<FoodTile *>(tile)) {
         player.pickFood(foodTile->getWeight());
+        grid[newPos.row * cols + newPos.col] = std::make_unique<EmptyTile>();
       }
 
       // Move the player and consume food.
@@ -182,65 +188,79 @@ public:
   }
 
   std::vector<Move> solve() {
-    std::priority_queue<std::pair<int, Coordinates>, std::vector<std::pair<int, Coordinates>>, std::greater<>> openSet;
-    std::unordered_set<Coordinates, std::hash<Coordinates>> closedSet;
-    std::unordered_map<Coordinates, Coordinates, std::hash<Coordinates>> cameFrom;
-    std::unordered_map<Coordinates, int, std::hash<Coordinates>> gScore;
-    std::unordered_map<Coordinates, int, std::hash<Coordinates>> foodMap;
+  // Deep copy grid
+  std::vector<std::unique_ptr<Tile>> localGrid;
+  for (const auto &tile : grid) {
+    localGrid.push_back(tile->clone());
+  }
+  
+  // Create a local player
+  Player localPlayer = player;
+  
+  // Use local versions of playerPos and startPos
+  Coordinates localPlayerPos = playerPos;
+  Coordinates startPos = localPlayerPos;
 
-    openSet.push({manhattanDistance(startPos, endPos) + player.getCurrentFood(), startPos});
-    gScore[startPos] = 0;
-    foodMap[startPos] = player.getCurrentFood();
+  // Rest of the code remains the same, but replace player with localPlayer
+  std::priority_queue<std::pair<int, Coordinates>, std::vector<std::pair<int, Coordinates>>, std::greater<>> openSet;
+  std::unordered_set<Coordinates, std::hash<Coordinates>> closedSet;
+  std::unordered_map<Coordinates, Coordinates, std::hash<Coordinates>> cameFrom;
+  std::unordered_map<Coordinates, int, std::hash<Coordinates>> gScore;
+  std::unordered_map<Coordinates, int, std::hash<Coordinates>> foodMap;
 
-    while (!openSet.empty()) {
-      Coordinates current = openSet.top().second;
-      openSet.pop();
+  openSet.push({manhattanDistance(startPos, endPos) + localPlayer.getCurrentFood(), startPos});
+  gScore[startPos] = 0;
+  foodMap[startPos] = localPlayer.getCurrentFood();
 
-      if (current == endPos) {
-        std::vector<Move> path;
-        while (cameFrom.count(current) > 0) {
-          Coordinates previous = cameFrom[current];
-          path.push_back(getMoveFromCoords(previous, current));
-          current = previous;
+  while (!openSet.empty()) {
+    Coordinates current = openSet.top().second;
+    openSet.pop();
+
+    if (current == endPos) {
+      std::vector<Move> path;
+      while (cameFrom.count(current) > 0) {
+        Coordinates previous = cameFrom[current];
+        path.push_back(getMoveFromCoords(previous, current));
+        current = previous;
+      }
+
+      std::reverse(path.begin(), path.end());
+      return path;
+    }
+
+    if (closedSet.count(current) > 0) {
+      continue;
+    }
+
+    closedSet.insert(current);
+
+    for (const auto &neighbor : getNeighbors(current)) {
+      if (closedSet.count(neighbor) == 0) {
+        int tentativeGScore = gScore[current] + 1;
+        int food = foodMap[current] - 1;
+
+        auto tile = localGrid[neighbor.row * cols + neighbor.col].get();
+        if (FoodTile *foodTile = dynamic_cast<FoodTile *>(tile)) {
+          food += foodTile->getWeight();
         }
 
-        std::reverse(path.begin(), path.end());
-        return path;
-      }
+        if (food <= 0) {
+          continue;
+        }
 
-      if (closedSet.count(current) > 0) {
-        continue;
-      }
-
-      closedSet.insert(current);
-
-      for (const auto &neighbor : getNeighbors(current)) {
-        if (closedSet.count(neighbor) == 0) {
-          int tentativeGScore = gScore[current] + 1;
-          int food = foodMap[current] - 1;
-
-          auto tile = grid[neighbor.row * cols + neighbor.col].get();
-          if (FoodTile *foodTile = dynamic_cast<FoodTile *>(tile)) {
-            food += foodTile->getWeight();
-          }
-
-          if (food <= 0) {
-            continue;
-          }
-
-          if (gScore.count(neighbor) == 0 || tentativeGScore < gScore[neighbor]) {
-            cameFrom[neighbor] = current;
-            gScore[neighbor] = tentativeGScore;
-            foodMap[neighbor] = food;
-            int fScore = tentativeGScore + manhattanDistance(neighbor, endPos) + food;
-            openSet.push({fScore, neighbor});
-          }
+        if (gScore.count(neighbor) == 0 || tentativeGScore < gScore[neighbor]) {
+          cameFrom[neighbor] = current;
+          gScore[neighbor] = tentativeGScore;
+          foodMap[neighbor] = food;
+          int fScore = tentativeGScore + manhattanDistance(neighbor, endPos) + food;
+          openSet.push({fScore, neighbor});
         }
       }
     }
-
-    throw std::runtime_error("Maze is not solvable");
   }
+
+  throw std::runtime_error("Maze is not solvable");
+}
 
  private:
   Move getMoveFromCoords(const Coordinates &from, const Coordinates &to) {
