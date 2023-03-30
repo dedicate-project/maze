@@ -1,6 +1,9 @@
 Maze Game Library
 =================
 
+.. image:: https://circleci.com/gh/dedicate-project/maze/tree/main.svg?style=shield
+    :target: https://circleci.com/gh/dedicate-project/maze/tree/main
+
 This is a maze game written in C++17. It uses a custom `Maze` class to represent the maze
 (tile-based, 2d) and a player object to move through the maze. The player needs to maintain a food
 level which is spent during movement (resource constraint) and can be replenished by picking up food
