@@ -9,6 +9,7 @@ jobs:
       - run:
           name: Setup cmake
           command: |
+            mkdir build
             cd build
             cmake ..
       - run:
@@ -18,6 +19,6 @@ jobs:
             make
 
 workflows:
-  say-hello-workflow:
+  build:
     jobs:
       - build
