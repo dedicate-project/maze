@@ -14,7 +14,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 include_directories(include)
 
 # Add library target for non-main source files
-add_library(${PROJECT_NAME} SHARED src/tiles.cpp src/player.cpp src/maze.cpp)
+add_library(${PROJECT_NAME} src/tiles.cpp src/player.cpp src/maze.cpp)
 set_target_properties(${PROJECT_NAME} PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 
 # Add executable target for main source file and link to library
