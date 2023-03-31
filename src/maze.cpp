@@ -8,7 +8,7 @@ namespace maze {
 
 Maze::Maze(uint32_t rows, uint32_t cols, double difficulty)
   : rows(rows), cols(cols), player(100) {
-  grid.resize(rows * cols);
+  grid.resize(static_cast<std::vector<int>::size_type>(rows) * cols);
   generateMaze(difficulty);
 }
 
