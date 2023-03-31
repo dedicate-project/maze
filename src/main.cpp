@@ -1,17 +1,18 @@
 // Standard
 #include <iostream>
 #include <stdexcept>
+#include <string>
 
 // Maze
 #include <maze/maze.hpp>
 
 void printMaze(const maze::Maze &maze) {
-  int rows = maze.getRows();
-  int cols = maze.getCols();
+  const uint32_t rows = maze.getRows();
+  const uint32_t cols = maze.getCols();
 
   std::cout << "Maze:\n";
-  for (int i = 0; i < rows; i++) {
-    for (int j = 0; j < cols; j++) {
+  for (uint32_t i = 0; i < rows; i++) {
+    for (uint32_t j = 0; j < cols; j++) {
       if (maze.isPlayerAt(i, j)) {
         std::cout << "X";
       } else if (maze.isStartAt(i, j)) {
@@ -35,8 +36,8 @@ void printMaze(const maze::Maze &maze) {
   std::cout << "\n";
 }
 
-maze::Maze getSolvableMaze(uint32_t rows, uint32_t cols, float difficulty, uint32_t max_tries) {
-  srand(time(0));
+maze::Maze getSolvableMaze(uint32_t rows, uint32_t cols, double difficulty, uint32_t max_tries) {
+  srand(static_cast<uint32_t>(time(0)));
   uint32_t tries = 0;
 
   do {
@@ -82,8 +83,6 @@ int main() {
       std::cout << "Game over: Out of food!\n";
       break;
     }
-
-    //printMaze(maze);
 
     if (maze.isFinished()) {
       std::cout << "Congratulations, you reached the end of the maze!\n";

@@ -1,11 +1,12 @@
 #include <maze/maze.hpp>
 
 // Standard
+#include <cmath>
 #include <stdexcept>
 
 namespace maze {
 
-Maze::Maze(int rows, int cols, float difficulty)
+Maze::Maze(uint32_t rows, uint32_t cols, double difficulty)
   : rows(rows), cols(cols), player(100) {
   grid.resize(rows * cols);
   generateMaze(difficulty);
@@ -15,35 +16,35 @@ bool Maze::isFinished() const {
   return playerPos == endPos;
 }
 
-Tile& Maze::getTile(int row, int col) const {
+Tile& Maze::getTile(uint32_t row, uint32_t col) const {
   return *grid[row * cols + col];
 }
 
-bool Maze::isPlayerAt(int row, int col) const {
+bool Maze::isPlayerAt(uint32_t row, uint32_t col) const {
   return row == playerPos.row && col == playerPos.col;
 }
 
-bool Maze::isStartAt(int row, int col) const {
+bool Maze::isStartAt(uint32_t row, uint32_t col) const {
   return row == startPos.row && col == startPos.col;
 }
 
-bool Maze::isEndAt(int row, int col) const {
+bool Maze::isEndAt(uint32_t row, uint32_t col) const {
   return row == endPos.row && col == endPos.col;
 }
 
-bool Maze::isInBounds(int row, int col) const {
+bool Maze::isInBounds(uint32_t row, uint32_t col) const {
   return row >= 0 && row < rows && col >= 0 && col < cols;
 }
 
-int Maze::getRows() const {
+uint32_t Maze::getRows() const {
   return rows;
 }
 
-int Maze::getCols() const {
+uint32_t Maze::getCols() const {
   return cols;
 }
 
-int Maze::getPlayerCurrentFood() const {
+uint32_t Maze::getPlayerCurrentFood() const {
   return player.getCurrentFood();
 }
 
@@ -100,14 +101,11 @@ std::vector<Maze::Move> Maze::solve() {
     localGrid.push_back(tile->clone());
   }
 
-  // Create a local player
+  // Use local versions of player, playerPos, and startPos
   Player localPlayer = player;
-
-  // Use local versions of playerPos and startPos
   Coordinates localPlayerPos = playerPos;
   Coordinates startPos = localPlayerPos;
 
-  // Rest of the code remains the same, but replace player with localPlayer
   std::priority_queue<std::pair<int, Coordinates>, std::vector<std::pair<int, Coordinates>>, std::greater<>> openSet;
   std::unordered_set<Coordinates, std::hash<Coordinates>> closedSet;
   std::unordered_map<Coordinates, Coordinates, std::hash<Coordinates>> cameFrom;
@@ -184,10 +182,10 @@ Maze::Move Maze::getMoveFromCoords(const Coordinates &from, const Coordinates &t
   }
 }
 
-void Maze::generateMaze(float difficulty) {
+void Maze::generateMaze(double difficulty) {
   // Fill the grid with wall tiles.
-  for (int i = 0; i < rows; i++) {
-    for (int j = 0; j < cols; j++) {
+  for (uint32_t i = 0; i < rows; i++) {
+    for (uint32_t j = 0; j < cols; j++) {
       if (j == 0 || i == 0 || j == cols - 1 || i == rows - 1) {
         grid[i * cols + j] = std::make_unique<WallTile>();
       } else {
@@ -197,45 +195,47 @@ void Maze::generateMaze(float difficulty) {
   }
 
   // Lambda function for recursive depth-first search maze generation.
-  std::function<void(int, int)> dfs = [&](int row, int col) {
-                                        // Set the current cell as an empty tile.
-                                        grid[row * cols + col] = std::make_unique<EmptyTile>();
+  const std::function<void(uint32_t, uint32_t)> dfs =
+      [&](uint32_t row, uint32_t col) {
+        // Set the current cell as an empty tile.
+        grid[row * cols + col] = std::make_unique<EmptyTile>();
 
-                                        // Randomly choose the order in which to visit neighbors.
-                                        std::vector<std::pair<int, int>> neighbors = {{-2, 0}, {2, 0}, {0, -2}, {0, 2}};
-                                        std::shuffle(neighbors.begin(), neighbors.end(), std::mt19937(std::random_device()()));
+        // Randomly choose the order in which to visit neighbors.
+        std::vector<std::pair<uint32_t, uint32_t>> neighbors = {{-2, 0}, {2, 0}, {0, -2}, {0, 2}};
+        std::shuffle(neighbors.begin(), neighbors.end(), std::mt19937(std::random_device()()));
 
-                                        // Visit neighbors.
-                                        for (const auto &[dr, dc] : neighbors) {
-                                          int newRow = row + dr;
-                                          int newCol = col + dc;
-                                          if (newRow > 0 && newRow < rows - 1 && newCol > 0 && newCol < cols - 1 && dynamic_cast<WallTile*>(&getTile(newRow, newCol))) {
-                                            // Remove the wall between cells.
-                                            grid[(row + newRow) / 2 * cols + (col + newCol) / 2] = std::make_unique<EmptyTile>();
+        // Visit neighbors.
+        for (const auto &[dr, dc] : neighbors) {
+          const uint32_t newRow = row + dr;
+          const uint32_t newCol = col + dc;
+          if (newRow > 0 && newRow < rows - 1 && newCol > 0 && newCol < cols - 1 &&
+              dynamic_cast<WallTile*>(&getTile(newRow, newCol))) {
+            // Remove the wall between cells.
+            grid[(row + newRow) / 2 * cols + (col + newCol) / 2] = std::make_unique<EmptyTile>();
 
-                                            // Continue generating the maze from the neighbor.
-                                            dfs(newRow, newCol);
-                                          }
-                                        }
-                                      };
+            // Continue generating the maze from the neighbor.
+            dfs(newRow, newCol);
+          }
+        }
+      };
 
   // Generate the maze layout.
   dfs(1, 1);
 
   // Add random walls based on the difficulty.
-  int numWallsToAdd = static_cast<int>(difficulty * (rows - 2) * (cols - 2) / 5);
-  for (int i = 0; i < numWallsToAdd; i++) {
-    int row = 1 + rand() % (rows - 2);
-    int col = 1 + rand() % (cols - 2);
+  const uint32_t numWallsToAdd = static_cast<uint32_t>(difficulty * (rows - 2) * (cols - 2) / 5);
+  for (uint32_t i = 0; i < numWallsToAdd; i++) {
+    uint32_t row = 1 + rand() % (rows - 2);
+    uint32_t col = 1 + rand() % (cols - 2);
     if (dynamic_cast<EmptyTile*>(&getTile(row, col))) {
       grid[row * cols + col] = std::make_unique<WallTile>();
     }
   }
 
   // Place special tiles.
-  int numFoodItems = static_cast<int>((1 - difficulty) * (rows - 2) * (cols - 2) / 5);
-  for (int i = 0; i < numFoodItems; i++) {
-    int row, col;
+  const uint32_t numFoodItems = static_cast<int>((1 - difficulty) * (rows - 2) * (cols - 2) / 5);
+  for (uint32_t i = 0; i < numFoodItems; i++) {
+    uint32_t row, col;
     do {
       row = 1 + rand() % (rows - 2);
       col = 1 + rand() % (cols - 2);
@@ -244,9 +244,9 @@ void Maze::generateMaze(float difficulty) {
   }
 
   // Place random doors based on difficulty.
-  int numDoors = static_cast<int>(difficulty * (rows + cols) / 4);
-  for (int i = 0; i < numDoors; i++) {
-    int row, col;
+  const uint32_t numDoors = static_cast<int>(difficulty * (rows + cols) / 4);
+  for (uint32_t i = 0; i < numDoors; i++) {
+    uint32_t row, col;
     do {
       row = 1 + rand() % (rows - 2);
       col = 1 + rand() % (cols - 2);
@@ -256,11 +256,11 @@ void Maze::generateMaze(float difficulty) {
 
   // Set random start and end positions on outer walls (excluding corners).
   std::vector<Coordinates> candidatePositions;
-  for (int col = 1; col < cols - 1; col++) {
+  for (uint32_t col = 1; col < cols - 1; col++) {
     candidatePositions.push_back({0, col});
     candidatePositions.push_back({rows - 1, col});
   }
-  for (int row = 1; row < rows - 1; row++) {
+  for (uint32_t row = 1; row < rows - 1; row++) {
     candidatePositions.push_back({row, 0});
     candidatePositions.push_back({row, cols - 1});
   }
@@ -273,10 +273,12 @@ void Maze::generateMaze(float difficulty) {
 
   // Assign start and end positions.
   for (const auto& pos : candidatePositions) {
-    if (startPos.row == 0 && startPos.col == 0 && dynamic_cast<WallTile*>(&getTile(pos.row, pos.col))) {
+    if (startPos.row == 0 && startPos.col == 0 &&
+        dynamic_cast<WallTile*>(&getTile(pos.row, pos.col))) {
       startPos = pos;
       grid[startPos.row * cols + startPos.col] = std::make_unique<EmptyTile>();
-    } else if (endPos.row == 0 && endPos.col == 0 && dynamic_cast<WallTile*>(&getTile(pos.row, pos.col)) && pos != startPos) {
+    } else if (endPos.row == 0 && endPos.col == 0 &&
+               dynamic_cast<WallTile*>(&getTile(pos.row, pos.col)) && pos != startPos) {
       endPos = pos;
       grid[endPos.row * cols + endPos.col] = std::make_unique<EmptyTile>();
       break;
@@ -289,11 +291,18 @@ void Maze::generateMaze(float difficulty) {
 
 std::vector<Coordinates> Maze::getNeighbors(const Coordinates &pos) {
   std::vector<Coordinates> neighbors;
-  std::vector<std::pair<int, int>> directions = {{-1, 0}, {1, 0}, {0, -1}, {0, 1}};
+  std::vector<std::pair<int32_t, int32_t>> directions = {{-1, 0}, {1, 0}, {0, -1}, {0, 1}};
 
   for (const auto &[dr, dc] : directions) {
-    int newRow = pos.row + dr;
-    int newCol = pos.col + dc;
+    const int32_t newRow_signed = pos.row + dr;
+    const int32_t newCol_signed = pos.col + dc;
+
+    if (newRow_signed < 0 || newCol_signed < 0) {
+      continue;
+    }
+
+    const uint32_t newRow = static_cast<uint32_t>(newRow_signed);
+    const uint32_t newCol = static_cast<uint32_t>(newCol_signed);
 
     if (isInBounds(newRow, newCol) && getTile(newRow, newCol).isPassable()) {
       neighbors.push_back({newRow, newCol});
@@ -303,8 +312,10 @@ std::vector<Coordinates> Maze::getNeighbors(const Coordinates &pos) {
   return neighbors;
 }
 
-int Maze::manhattanDistance(const Coordinates &a, const Coordinates &b) {
-  return std::abs(a.row - b.row) + std::abs(a.col - b.col);
+uint32_t Maze::manhattanDistance(const Coordinates &a, const Coordinates &b) {
+  return
+      static_cast<uint32_t>(std::abs(static_cast<int32_t>(a.row - b.row)) +
+                            std::abs(static_cast<int32_t>(a.col - b.col)));
 }
 
 }  // namespace maze

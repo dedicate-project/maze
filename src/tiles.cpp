@@ -20,11 +20,11 @@ std::unique_ptr<Tile> DoorTile::clone() const {
   return std::make_unique<DoorTile>(*this);
 }
 
-FoodTile::FoodTile(int weight) : weight(weight) {}
+FoodTile::FoodTile(uint32_t weight) : weight(weight) {}
 
 bool FoodTile::isPassable() const { return true; }
 
-int FoodTile::getWeight() const { return weight; }
+uint32_t FoodTile::getWeight() const { return weight; }
 
 std::unique_ptr<Tile> FoodTile::clone() const {
   return std::make_unique<FoodTile>(*this);

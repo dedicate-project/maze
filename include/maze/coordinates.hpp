@@ -2,13 +2,14 @@
 #define MAZE_COORDINATES_HPP_
 
 // Standard
+#include <cstdint>
 #include <functional>
 
 namespace maze {
 
 struct Coordinates {
-  int row;
-  int col;
+  uint32_t row;
+  uint32_t col;
 
   bool operator==(const Coordinates& other) const {
     return other.row == row && other.col == col;

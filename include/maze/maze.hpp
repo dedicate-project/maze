@@ -7,6 +7,7 @@
 #define MAZE_MAZE_HPP_
 
 // Standard
+#include <cstdint>
 #include <queue>
 #include <random>
 #include <unordered_set>
@@ -35,7 +36,7 @@ class Maze {
    * @param cols The number of columns in the maze.
    * @param difficulty The difficulty of the maze, represented as a value between 0 and 1.
    */
-  Maze(int rows, int cols, float difficulty);
+  Maze(uint32_t rows, uint32_t cols, double difficulty);
 
   /**
    * @brief Moves the player in the specified direction.
@@ -56,7 +57,7 @@ class Maze {
    * @param col The column of the tile to retrieve.
    * @return A reference to the tile at the specified position.
    */
-  Tile& getTile(int row, int col) const;
+  Tile& getTile(uint32_t row, uint32_t col) const;
 
   /**
    * @brief Returns whether or not the player is at the specified position in the maze.
@@ -64,7 +65,7 @@ class Maze {
    * @param col The column to check.
    * @return True if the player is at the specified position, false otherwise.
    */
-  bool isPlayerAt(int row, int col) const;
+  bool isPlayerAt(uint32_t row, uint32_t col) const;
 
   /**
    * @brief Returns whether or not the start of the maze is at the specified position.
@@ -72,7 +73,7 @@ class Maze {
    * @param col The column to check.
    * @return True if the start of the maze is at the specified position, false otherwise.
    */
-  bool isStartAt(int row, int col) const;
+  bool isStartAt(uint32_t row, uint32_t col) const;
 
   /**
    * @brief Returns whether or not the end of the maze is at the specified position.
@@ -80,7 +81,7 @@ class Maze {
    * @param col The column to check.
    * @return True if the end of the maze is at the specified position, false otherwise.
    */
-  bool isEndAt(int row, int col) const;
+  bool isEndAt(uint32_t row, uint32_t col) const;
 
   /**
    * @brief Returns whether or not the specified position is within the bounds of the maze.
@@ -88,25 +89,25 @@ class Maze {
    * @param col The column to check.
    * @return True if the position is within the bounds of the maze, false otherwise.
    */
-  bool isInBounds(int row, int col) const;
+  bool isInBounds(uint32_t row, uint32_t col) const;
 
   /**
    * @brief Returns the number of rows in the maze.
    * @return The number of rows in the maze.
    */
-  int getRows() const;
+  uint32_t getRows() const;
 
   /**
    * @brief Returns the number of columns in the maze.
    * @return The number of columns in the maze.
    */
-  int getCols() const;
+  uint32_t getCols() const;
 
   /**
    * @brief Returns the current amount of food in the player's inventory.
    * @return The current amount of food in the player's inventory.
    */
-  int getPlayerCurrentFood() const;
+  uint32_t getPlayerCurrentFood() const;
 
   /**
    * @brief Determines whether or not the maze is solvable.
@@ -127,20 +128,20 @@ class Maze {
    * @param to The ending position.
    * @return The move that goes from the "from" position to the "to" position.
    */
-  Move getMoveFromCoords(const Coordinates &from, const Coordinates &to);
+  Move getMoveFromCoords(const Coordinates& from, const Coordinates& to);
 
   /**
    * @brief Generates the maze with the specified difficulty.
    * @param difficulty The difficulty of the maze, represented as a value between 0 and 1.
    */
-  void generateMaze(float difficulty);
+  void generateMaze(double difficulty);
 
   /**
    * @brief Returns a vector of the neighboring positions of the specified position.
    * @param pos The position to find neighbors for.
    * @return A vector of the neighboring positions of the specified position.
    */
-  std::vector<Coordinates> getNeighbors(const Coordinates &pos);
+  std::vector<Coordinates> getNeighbors(const Coordinates& pos);
 
   /**
    * @brief Returns the Manhattan distance between two positions.
@@ -148,10 +149,10 @@ class Maze {
    * @param b The second position.
    * @return The Manhattan distance between the two positions.
    */
-  int manhattanDistance(const Coordinates &a, const Coordinates &b);
+  uint32_t manhattanDistance(const Coordinates& a, const Coordinates& b);
 
-  int rows; /**< The number of rows in the maze. */
-  int cols; /**< The number of columns in the maze. */
+  uint32_t rows; /**< The number of rows in the maze. */
+  uint32_t cols; /**< The number of columns in the maze. */
   std::vector<std::unique_ptr<Tile>> grid; /**< The grid of tiles that make up the maze. */
   Player player; /**< The player object. */
   Coordinates startPos; /**< The starting position of the maze. */
