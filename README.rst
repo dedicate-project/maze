@@ -4,8 +4,8 @@ Maze Game Library
 .. image:: https://circleci.com/gh/dedicate-project/maze/tree/main.svg?style=shield
     :target: https://circleci.com/gh/dedicate-project/maze/tree/main
 
-.. image:: https://github.com/dedicate-project/beast/actions/workflows/codeql.yml/badge.svg?branch=main
-   :target: https://github.com/dedicate-project/beast/actions/workflows/codeql.yml?branch=main
+.. image:: https://github.com/dedicate-project/maze/actions/workflows/codeql.yml/badge.svg?branch=main
+   :target: https://github.com/dedicate-project/maze/actions/workflows/codeql.yml?branch=main
 
 
 This is a maze game written in C++17. It uses a custom `Maze` class to represent the maze
