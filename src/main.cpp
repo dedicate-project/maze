@@ -1,5 +1,6 @@
 // Standard
 #include <iostream>
+#include <stdexcept>
 
 // Maze
 #include <maze/maze.hpp>

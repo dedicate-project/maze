@@ -1,5 +1,8 @@
 #include <maze/maze.hpp>
 
+// Standard
+#include <stdexcept>
+
 namespace maze {
 
 Maze::Maze(int rows, int cols, float difficulty)
