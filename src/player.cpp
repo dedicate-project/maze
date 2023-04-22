@@ -3,7 +3,7 @@
 namespace maze {
 
 Player::Player(uint32_t maxWeight)
-  : maxWeight(maxWeight), currentWeight(0)
+  : maxWeight(maxWeight), currentWeight(maxWeight)
 {
 }
 
