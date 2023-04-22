@@ -110,11 +110,9 @@ std::vector<Maze::Move> Maze::solve() {
   std::unordered_set<Coordinates, std::hash<Coordinates>> closedSet;
   std::unordered_map<Coordinates, Coordinates, std::hash<Coordinates>> cameFrom;
   std::unordered_map<Coordinates, int, std::hash<Coordinates>> gScore;
-  std::unordered_map<Coordinates, int, std::hash<Coordinates>> foodMap;
 
-  openSet.push({manhattanDistance(startPos, endPos) + localPlayer.getCurrentFood(), startPos});
+  openSet.push({manhattanDistance(startPos, endPos), startPos});
   gScore[startPos] = 0;
-  foodMap[startPos] = localPlayer.getCurrentFood();
 
   while (!openSet.empty()) {
     Coordinates current = openSet.top().second;
@@ -141,22 +139,11 @@ std::vector<Maze::Move> Maze::solve() {
     for (const auto &neighbor : getNeighbors(current)) {
       if (closedSet.count(neighbor) == 0) {
         int tentativeGScore = gScore[current] + 1;
-        int food = foodMap[current] - 1;
-
-        auto tile = localGrid[neighbor.row * cols + neighbor.col].get();
-        if (FoodTile* foodTile = dynamic_cast<FoodTile*>(tile)) {
-          food += foodTile->getWeight();
-        }
-
-        if (food <= 0) {
-          continue;
-        }
 
         if (gScore.count(neighbor) == 0 || tentativeGScore < gScore[neighbor]) {
           cameFrom[neighbor] = current;
           gScore[neighbor] = tentativeGScore;
-          foodMap[neighbor] = food;
-          int fScore = tentativeGScore + manhattanDistance(neighbor, endPos) + food;
+          int fScore = tentativeGScore + manhattanDistance(neighbor, endPos);
           openSet.push({fScore, neighbor});
         }
       }
