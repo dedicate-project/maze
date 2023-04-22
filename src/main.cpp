@@ -1,3 +1,4 @@
+
 // Standard
 #include <iostream>
 #include <stdexcept>
@@ -37,7 +38,6 @@ void printMaze(const maze::Maze &maze) {
 }
 
 maze::Maze getSolvableMaze(uint32_t rows, uint32_t cols, double difficulty, uint32_t max_tries) {
-  srand(static_cast<uint32_t>(time(0)));
   uint32_t tries = 0;
 
   do {

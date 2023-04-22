@@ -224,9 +224,11 @@ void Maze::generateMaze(double difficulty) {
 
   // Add random walls based on the difficulty.
   const uint32_t numWallsToAdd = static_cast<uint32_t>(difficulty * (rows - 2) * (cols - 2) / 5);
+  std::random_device random_device;
+  std::mt19937 rng(random_device());
   for (uint32_t i = 0; i < numWallsToAdd; i++) {
-    uint32_t row = 1 + rand() % (rows - 2);
-    uint32_t col = 1 + rand() % (cols - 2);
+    uint32_t row = 1 + rng() % (rows - 2);
+    uint32_t col = 1 + rng() % (cols - 2);
     if (dynamic_cast<EmptyTile*>(&getTile(row, col))) {
       grid[row * cols + col] = std::make_unique<WallTile>();
     }
@@ -237,10 +239,10 @@ void Maze::generateMaze(double difficulty) {
   for (uint32_t i = 0; i < numFoodItems; i++) {
     uint32_t row, col;
     do {
-      row = 1 + rand() % (rows - 2);
-      col = 1 + rand() % (cols - 2);
+      row = 1 + rng() % (rows - 2);
+      col = 1 + rng() % (cols - 2);
     } while (!dynamic_cast<EmptyTile*>(&getTile(row, col)));
-    grid[row * cols + col] = std::make_unique<FoodTile>(10 + rand() % 11);
+    grid[row * cols + col] = std::make_unique<FoodTile>(10 + rng() % 11);
   }
 
   // Place random doors based on difficulty.
@@ -248,8 +250,8 @@ void Maze::generateMaze(double difficulty) {
   for (uint32_t i = 0; i < numDoors; i++) {
     uint32_t row, col;
     do {
-      row = 1 + rand() % (rows - 2);
-      col = 1 + rand() % (cols - 2);
+      row = 1 + rng() % (rows - 2);
+      col = 1 + rng() % (cols - 2);
     } while (!dynamic_cast<EmptyTile*>(&getTile(row, col)));
     grid[row * cols + col] = std::make_unique<DoorTile>();
   }
@@ -266,7 +268,7 @@ void Maze::generateMaze(double difficulty) {
   }
 
   // Shuffle candidate positions.
-  std::shuffle(candidatePositions.begin(), candidatePositions.end(), std::mt19937(std::random_device()()));
+  std::shuffle(candidatePositions.begin(), candidatePositions.end(), std::mt19937(random_device()));
 
   startPos = {0, 0};
   endPos = {0, 0};
