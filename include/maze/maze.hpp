@@ -121,6 +121,12 @@ class Maze {
    */
   std::vector<Move> solve();
 
+  Coordinates getStartPosition() const;
+
+  Coordinates getEndPosition() const;
+
+  Coordinates getPlayerPosition() const;
+
  private:
   /**
    * @brief Returns the move that goes from the "from" position to the "to" position.

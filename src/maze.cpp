@@ -184,6 +184,18 @@ Maze::Move Maze::getMoveFromCoords(const Coordinates &from, const Coordinates &t
   }
 }
 
+Coordinates Maze::getStartPosition() const {
+  return startPos;
+}
+
+Coordinates Maze::getEndPosition() const {
+  return endPos;
+}
+
+Coordinates Maze::getPlayerPosition() const {
+  return playerPos;
+}
+
 void Maze::generateMaze(double difficulty) {
   // Fill the grid with wall tiles.
   for (uint32_t i = 0; i < rows; i++) {
