@@ -6,6 +6,14 @@
 
 namespace maze {
 
+namespace {
+int squaredDistance(int x1, int y1, int x2, int y2) {
+  int deltaX = x2 - x1;
+  int deltaY = y2 - y1;
+  return deltaX * deltaX + deltaY * deltaY;
+}
+} // namespace
+
 Maze::Maze(uint32_t rows, uint32_t cols, double difficulty)
   : rows(rows), cols(cols), player(100) {
   grid.resize(static_cast<std::vector<int>::size_type>(rows) * cols);
@@ -74,7 +82,7 @@ bool Maze::movePlayer(Maze::Move move) {
     // Handle special tiles.
     if (FoodTile* foodTile = dynamic_cast<FoodTile*>(tile)) {
       player.pickFood(foodTile->getWeight());
-      grid[newPos.row * cols + newPos.col] = std::make_unique<EmptyTile>();
+      grid[newPos.row * cols + newPos.col] = std::make_shared<EmptyTile>();
     }
 
     // Move the player and consume food.
@@ -96,7 +104,7 @@ bool Maze::isSolvable() {
 
 std::vector<Maze::Move> Maze::solve() {
   // Deep copy grid
-  std::vector<std::unique_ptr<Tile>> localGrid;
+  std::vector<std::shared_ptr<Tile>> localGrid;
   for (const auto &tile : grid) {
     localGrid.push_back(tile->clone());
   }
@@ -147,7 +155,7 @@ std::vector<Maze::Move> Maze::solve() {
         if (FoodTile* foodTile = dynamic_cast<FoodTile*>(tile)) {
           food += foodTile->getWeight();
           // Update the tile to an empty tile after the food is consumed
-          localGrid[neighbor.row * cols + neighbor.col] = std::make_unique<EmptyTile>();
+          localGrid[neighbor.row * cols + neighbor.col] = std::make_shared<EmptyTile>();
         }
 
         if (food <= 0) {
@@ -166,6 +174,40 @@ std::vector<Maze::Move> Maze::solve() {
   }
 
   throw std::runtime_error("Maze is not solvable");
+}
+
+bool Maze::blocksLineOfSight(const std::shared_ptr<Tile>& tile) const {
+  return std::dynamic_pointer_cast<WallTile>(tile) != nullptr;
+}
+
+bool Maze::lineOfSight(int startX, int startY, int endX, int endY) const {
+  int diffX = abs(endX - startX);
+  int diffY = abs(endY - startY);
+  int stepX = (startX < endX) ? 1 : -1;
+  int stepY = (startY < endY) ? 1 : -1;
+  int error = diffX - diffY;
+
+  while (true) {
+    if (blocksLineOfSight(grid[startY * cols + startX])) {
+      return false;
+    }
+
+    if (startX == endX && startY == endY) {
+      break;
+    }
+
+    int error2 = error * 2;
+    if (error2 > -diffY) {
+      error -= diffY;
+      startX += stepX;
+    }
+    if (error2 < diffX) {
+      error += diffX;
+      startY += stepY;
+    }
+  }
+
+  return true;
 }
 
 Maze::Move Maze::getMoveFromCoords(const Coordinates &from, const Coordinates &to) {
@@ -196,14 +238,62 @@ Coordinates Maze::getPlayerPosition() const {
   return playerPos;
 }
 
+std::vector<std::vector<Maze::PerceivedTile>> Maze::perceiveTiles(uint32_t radius) {
+  const uint32_t vector_size = radius * 2 + 1;
+  std::vector<std::vector<PerceivedTile>> perceived_rows;
+  perceived_rows.resize(vector_size);
+  for (std::vector<PerceivedTile>& perceived_col : perceived_rows) {
+    perceived_col.resize(vector_size, PerceivedTile::UNKNOWN);
+  }
+
+  const uint32_t squaredRadius = radius * radius;
+  for (int32_t row = playerPos.row - radius; row <= playerPos.row + radius; ++row) {
+    if (row < 0 || row >= rows) {
+      continue;
+    }
+    for (int32_t col = playerPos.col - radius; col <= playerPos.col; ++col) {
+      if (col < 0 || col >= cols) {
+        continue;
+      }
+
+      if (squaredDistance(playerPos.col, playerPos.row, col, row) > squaredRadius) {
+        continue;
+      }
+
+      if (!lineOfSight(playerPos.col, playerPos.row, col, row)) {
+        continue;
+      }
+
+      if (startPos.row == row && startPos.col == col) {
+        perceived_rows[row][col] = PerceivedTile::START;
+      } else if (endPos.row == row && endPos.col == col) {
+        perceived_rows[row][col] = PerceivedTile::END;
+      } else {
+        const std::shared_ptr<Tile> tile = grid[row * cols + col];
+        if (std::dynamic_pointer_cast<WallTile>(tile)) {
+          perceived_rows[row][col] = PerceivedTile::WALL;
+        } else if (std::dynamic_pointer_cast<DoorTile>(tile)) {
+          perceived_rows[row][col] = PerceivedTile::DOOR;
+        } else if (std::dynamic_pointer_cast<FoodTile>(tile)) {
+          perceived_rows[row][col] = PerceivedTile::FOOD;
+        } else if (std::dynamic_pointer_cast<EmptyTile>(tile)) {
+          perceived_rows[row][col] = PerceivedTile::EMPTY;
+        }
+      }
+    }
+  }
+
+  return perceived_rows;
+}
+
 void Maze::generateMaze(double difficulty) {
   // Fill the grid with wall tiles.
   for (uint32_t i = 0; i < rows; i++) {
     for (uint32_t j = 0; j < cols; j++) {
       if (j == 0 || i == 0 || j == cols - 1 || i == rows - 1) {
-        grid[i * cols + j] = std::make_unique<WallTile>();
+        grid[i * cols + j] = std::make_shared<WallTile>();
       } else {
-        grid[i * cols + j] = std::make_unique<EmptyTile>();
+        grid[i * cols + j] = std::make_shared<EmptyTile>();
       }
     }
   }
@@ -212,7 +302,7 @@ void Maze::generateMaze(double difficulty) {
   const std::function<void(uint32_t, uint32_t)> dfs =
       [&](uint32_t row, uint32_t col) {
         // Set the current cell as an empty tile.
-        grid[row * cols + col] = std::make_unique<EmptyTile>();
+        grid[row * cols + col] = std::make_shared<EmptyTile>();
 
         // Randomly choose the order in which to visit neighbors.
         std::vector<std::pair<uint32_t, uint32_t>> neighbors = {{-2, 0}, {2, 0}, {0, -2}, {0, 2}};
@@ -225,7 +315,7 @@ void Maze::generateMaze(double difficulty) {
           if (newRow > 0 && newRow < rows - 1 && newCol > 0 && newCol < cols - 1 &&
               dynamic_cast<WallTile*>(&getTile(newRow, newCol))) {
             // Remove the wall between cells.
-            grid[(row + newRow) / 2 * cols + (col + newCol) / 2] = std::make_unique<EmptyTile>();
+            grid[(row + newRow) / 2 * cols + (col + newCol) / 2] = std::make_shared<EmptyTile>();
 
             // Continue generating the maze from the neighbor.
             dfs(newRow, newCol);
@@ -244,7 +334,7 @@ void Maze::generateMaze(double difficulty) {
     uint32_t row = 1 + rng() % (rows - 2);
     uint32_t col = 1 + rng() % (cols - 2);
     if (dynamic_cast<EmptyTile*>(&getTile(row, col))) {
-      grid[row * cols + col] = std::make_unique<WallTile>();
+      grid[row * cols + col] = std::make_shared<WallTile>();
     }
   }
 
@@ -256,7 +346,7 @@ void Maze::generateMaze(double difficulty) {
       row = 1 + rng() % (rows - 2);
       col = 1 + rng() % (cols - 2);
     } while (!dynamic_cast<EmptyTile*>(&getTile(row, col)));
-    grid[row * cols + col] = std::make_unique<FoodTile>(10 + rng() % 11);
+    grid[row * cols + col] = std::make_shared<FoodTile>(10 + rng() % 11);
   }
 
   // Place random doors based on difficulty.
@@ -267,7 +357,7 @@ void Maze::generateMaze(double difficulty) {
       row = 1 + rng() % (rows - 2);
       col = 1 + rng() % (cols - 2);
     } while (!dynamic_cast<EmptyTile*>(&getTile(row, col)));
-    grid[row * cols + col] = std::make_unique<DoorTile>();
+    grid[row * cols + col] = std::make_shared<DoorTile>();
   }
 
   // Set random start and end positions on outer walls (excluding corners).
@@ -292,11 +382,11 @@ void Maze::generateMaze(double difficulty) {
     if (startPos.row == 0 && startPos.col == 0 &&
         dynamic_cast<WallTile*>(&getTile(pos.row, pos.col))) {
       startPos = pos;
-      grid[startPos.row * cols + startPos.col] = std::make_unique<EmptyTile>();
+      grid[startPos.row * cols + startPos.col] = std::make_shared<EmptyTile>();
     } else if (endPos.row == 0 && endPos.col == 0 &&
                dynamic_cast<WallTile*>(&getTile(pos.row, pos.col)) && pos != startPos) {
       endPos = pos;
-      grid[endPos.row * cols + endPos.col] = std::make_unique<EmptyTile>();
+      grid[endPos.row * cols + endPos.col] = std::make_shared<EmptyTile>();
       break;
     }
   }

@@ -21,14 +21,22 @@
 namespace maze {
 
 /**
+ * @class Maze
  * @brief The Maze class represents the maze in the maze game.
  */
 class Maze {
  public:
   /**
+   * @enum Move
    * @brief The possible moves that the player can make.
    */
   enum class Move { LEFT, RIGHT, UP, DOWN };
+
+  /**
+   * @enum PerceivedTile
+   * @brief Represents the types of perceived tiles.
+   */
+  enum class PerceivedTile { UNKNOWN, EMPTY, WALL, FOOD, DOOR, START, END };
 
   /**
    * @brief Constructs a new Maze with the given number of rows, columns, and difficulty.
@@ -121,13 +129,49 @@ class Maze {
    */
   std::vector<Move> solve();
 
+  /**
+   * @brief Returns the player's start position in the maze.
+   * @return A coordinates object representing the player's start position.
+   */
   Coordinates getStartPosition() const;
 
+  /**
+   * @brief Returns the end position in the maze.
+   * @return A coordinates object representing the end position.
+   */
   Coordinates getEndPosition() const;
 
+  /**
+   * @brief Returns the player's current position in the maze.
+   * @return A coordinates object representing the player's current position.
+   */
   Coordinates getPlayerPosition() const;
 
+  /**
+   * @brief Returns the currently perceived tiles around the player based on their type and a sight radius.
+   * @param radius The radius of the player's field of view.
+   * @return A 2D vector of PerceivedTile types representing the tiles within the player's field of view.
+   */
+  std::vector<std::vector<PerceivedTile>> perceiveTiles(uint32_t radius);
+
  private:
+  /**
+   * @brief Checks if a line of sight is blocked by the given tile.
+   * @param tile The tile to check.
+   * @return True if the line of sight is blocked, false otherwise.
+   */
+  bool blocksLineOfSight(const std::shared_ptr<Tile>& tile) const;
+
+  /**
+   * @brief Determines if there is a line of sight between two points in the maze.
+   * @param startX The starting X coordinate.
+   * @param startY The starting Y coordinate.
+   * @param endX The ending X coordinate.
+   * @param endY The ending Y coordinate.
+   * @return True if there is a line of sight between the points, false otherwise.
+   */
+  bool lineOfSight(int startX, int startY, int endX, int endY) const;
+
   /**
    * @brief Returns the move that goes from the "from" position to the "to" position.
    * @param from The starting position.
@@ -159,7 +203,7 @@ class Maze {
 
   uint32_t rows; /**< The number of rows in the maze. */
   uint32_t cols; /**< The number of columns in the maze. */
-  std::vector<std::unique_ptr<Tile>> grid; /**< The grid of tiles that make up the maze. */
+  std::vector<std::shared_ptr<Tile>> grid; /**< The grid of tiles that make up the maze. */
   Player player; /**< The player object. */
   Coordinates startPos; /**< The starting position of the maze. */
   Coordinates endPos; /**< The ending position of the maze. */
