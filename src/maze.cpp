@@ -41,10 +41,54 @@ Maze::Maze(const std::vector<std::vector<PerceivedTile>>& maze_layout)
   cols_ = cols;
 
   grid_.resize(static_cast<std::vector<int>::size_type>(rows) * cols);
-  for (const std::vector<PerceivedTile>& col : maze_layout) {
-    for (const PerceivedTile& tile : col) {
-      // ...
+  bool has_start = false;
+  bool has_end = false;
+  uint32_t row = 0;
+  for (const std::vector<PerceivedTile>& column : maze_layout) {
+    uint32_t col = 0;
+    for (const PerceivedTile& tile : column) {
+      switch (tile) {
+      case PerceivedTile::START: {
+        start_pos_ = {row, col};
+        grid_[row * cols + col] = std::make_shared<WallTile>();
+        has_start = true;
+      } break;
+
+      case PerceivedTile::END: {
+        end_pos_ = {row, col};
+        grid_[row * cols + col] = std::make_shared<WallTile>();
+        has_end = true;
+      } break;
+
+      case PerceivedTile::WALL: {
+        grid_[row * cols + col] = std::make_shared<WallTile>();
+      } break;
+
+      case PerceivedTile::DOOR: {
+        grid_[row * cols + col] = std::make_shared<DoorTile>();
+      } break;
+
+      case PerceivedTile::FOOD: {
+        grid_[row * cols + col] = std::make_shared<FoodTile>(1);
+      } break;
+
+      case PerceivedTile::UNKNOWN:
+      case PerceivedTile::EMPTY: {
+        grid_[row * cols + col] = std::make_shared<EmptyTile>();
+      } break;
+
+      default:
+        break;
+      }
+      col++;
     }
+    row++;
+  }
+  if (!has_start) {
+    throw std::invalid_argument("Layout has no start, which is required.");
+  }
+  if (!has_end) {
+    throw std::invalid_argument("Layout has no end, which is required.");
   }
 }
 
@@ -52,8 +96,8 @@ bool Maze::isFinished() const {
   return player_pos_ == end_pos_;
 }
 
-Tile& Maze::getTile(uint32_t row, uint32_t col) const {
-  return *grid_[row * cols_ + col];
+std::shared_ptr<Tile> Maze::getTile(uint32_t row, uint32_t col) const {
+  return grid_[row * cols_ + col];
 }
 
 bool Maze::isPlayerAt(uint32_t row, uint32_t col) const {
@@ -125,7 +169,7 @@ bool Maze::isSolvable() {
   try {
     solve();
     return true;
-  } catch (const std::runtime_error &) {
+  } catch (const std::runtime_error&) {
     return false;
   }
 }
@@ -133,7 +177,7 @@ bool Maze::isSolvable() {
 std::vector<Maze::Move> Maze::solve() {
   // Deep copy grid
   std::vector<std::shared_ptr<Tile>> localGrid;
-  for (const auto &tile : grid_) {
+  for (const auto& tile : grid_) {
     localGrid.push_back(tile->clone());
   }
 
@@ -174,7 +218,7 @@ std::vector<Maze::Move> Maze::solve() {
 
     closedSet.insert(current);
 
-    for (const auto &neighbor : getNeighbors(current)) {
+    for (const auto& neighbor : getNeighbors(current)) {
       if (closedSet.count(neighbor) == 0) {
         int tentativeGScore = gScore[current] + 1;
         int food = foodMap[current] - 1;
@@ -238,7 +282,7 @@ bool Maze::lineOfSight(int startX, int startY, int endX, int endY) const {
   return true;
 }
 
-Maze::Move Maze::getMoveFromCoords(const Coordinates &from, const Coordinates &to) {
+Maze::Move Maze::getMoveFromCoords(const Coordinates& from, const Coordinates& to) {
   if (from.row == to.row) {
     if (from.col < to.col) {
       return Move::RIGHT;
@@ -337,11 +381,11 @@ void Maze::generateMaze(double difficulty) {
         std::shuffle(neighbors.begin(), neighbors.end(), std::mt19937(std::random_device()()));
 
         // Visit neighbors.
-        for (const auto &[dr, dc] : neighbors) {
+        for (const auto& [dr, dc] : neighbors) {
           const uint32_t newRow = row + dr;
           const uint32_t newCol = col + dc;
           if (newRow > 0 && newRow < rows_ - 1 && newCol > 0 && newCol < cols_ - 1 &&
-              dynamic_cast<WallTile*>(&getTile(newRow, newCol))) {
+              std::dynamic_pointer_cast<WallTile>(getTile(newRow, newCol))) {
             // Remove the wall between cells.
             grid_[(row + newRow) / 2 * cols_ + (col + newCol) / 2] = std::make_shared<EmptyTile>();
 
@@ -361,7 +405,7 @@ void Maze::generateMaze(double difficulty) {
   for (uint32_t i = 0; i < numWallsToAdd; i++) {
     uint32_t row = 1 + rng() % (rows_ - 2);
     uint32_t col = 1 + rng() % (cols_ - 2);
-    if (dynamic_cast<EmptyTile*>(&getTile(row, col))) {
+    if (std::dynamic_pointer_cast<EmptyTile>(getTile(row, col))) {
       grid_[row * cols_ + col] = std::make_shared<WallTile>();
     }
   }
@@ -373,7 +417,7 @@ void Maze::generateMaze(double difficulty) {
     do {
       row = 1 + rng() % (rows_ - 2);
       col = 1 + rng() % (cols_ - 2);
-    } while (!dynamic_cast<EmptyTile*>(&getTile(row, col)));
+    } while (!std::dynamic_pointer_cast<EmptyTile>(getTile(row, col)));
     grid_[row * cols_ + col] = std::make_shared<FoodTile>(10 + rng() % 11);
   }
 
@@ -384,7 +428,7 @@ void Maze::generateMaze(double difficulty) {
     do {
       row = 1 + rng() % (rows_ - 2);
       col = 1 + rng() % (cols_ - 2);
-    } while (!dynamic_cast<EmptyTile*>(&getTile(row, col)));
+    } while (!std::dynamic_pointer_cast<EmptyTile>(getTile(row, col)));
     grid_[row * cols_ + col] = std::make_shared<DoorTile>();
   }
 
@@ -408,11 +452,11 @@ void Maze::generateMaze(double difficulty) {
   // Assign start and end positions.
   for (const auto& pos : candidatePositions) {
     if (start_pos_.row == 0 && start_pos_.col == 0 &&
-        dynamic_cast<WallTile*>(&getTile(pos.row, pos.col))) {
+        std::dynamic_pointer_cast<WallTile>(getTile(pos.row, pos.col))) {
       start_pos_ = pos;
       grid_[start_pos_.row * cols_ + start_pos_.col] = std::make_shared<EmptyTile>();
     } else if (end_pos_.row == 0 && end_pos_.col == 0 &&
-               dynamic_cast<WallTile*>(&getTile(pos.row, pos.col)) && pos != start_pos_) {
+               std::dynamic_pointer_cast<WallTile>(getTile(pos.row, pos.col)) && pos != start_pos_) {
       end_pos_ = pos;
       grid_[end_pos_.row * cols_ + end_pos_.col] = std::make_shared<EmptyTile>();
       break;
@@ -423,11 +467,11 @@ void Maze::generateMaze(double difficulty) {
   player_pos_ = start_pos_;
 }
 
-std::vector<Coordinates> Maze::getNeighbors(const Coordinates &pos) {
+std::vector<Coordinates> Maze::getNeighbors(const Coordinates& pos) {
   std::vector<Coordinates> neighbors;
   std::vector<std::pair<int32_t, int32_t>> directions = {{-1, 0}, {1, 0}, {0, -1}, {0, 1}};
 
-  for (const auto &[dr, dc] : directions) {
+  for (const auto& [dr, dc] : directions) {
     const int32_t newRow_signed = pos.row + dr;
     const int32_t newCol_signed = pos.col + dc;
 
@@ -438,7 +482,7 @@ std::vector<Coordinates> Maze::getNeighbors(const Coordinates &pos) {
     const uint32_t newRow = static_cast<uint32_t>(newRow_signed);
     const uint32_t newCol = static_cast<uint32_t>(newCol_signed);
 
-    if (isInBounds(newRow, newCol) && getTile(newRow, newCol).isPassable()) {
+    if (isInBounds(newRow, newCol) && getTile(newRow, newCol)->isPassable()) {
       neighbors.push_back({newRow, newCol});
     }
   }
@@ -446,7 +490,7 @@ std::vector<Coordinates> Maze::getNeighbors(const Coordinates &pos) {
   return neighbors;
 }
 
-uint32_t Maze::manhattanDistance(const Coordinates &a, const Coordinates &b) {
+uint32_t Maze::manhattanDistance(const Coordinates& a, const Coordinates& b) {
   return
       static_cast<uint32_t>(std::abs(static_cast<int32_t>(a.row - b.row)) +
                             std::abs(static_cast<int32_t>(a.col - b.col)));

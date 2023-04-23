@@ -69,9 +69,9 @@ class Maze {
    * @brief Returns the tile at the specified position in the maze.
    * @param row The row of the tile to retrieve.
    * @param col The column of the tile to retrieve.
-   * @return A reference to the tile at the specified position.
+   * @return A shared pointer to the tile at the specified position.
    */
-  Tile& getTile(uint32_t row, uint32_t col) const;
+  std::shared_ptr<Tile> getTile(uint32_t row, uint32_t col) const;
 
   /**
    * @brief Returns whether or not the player is at the specified position in the maze.

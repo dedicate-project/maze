@@ -20,10 +20,10 @@ void printMaze(const maze::Maze &maze) {
         std::cout << "o";
       } else if (maze.isEndAt(i, j)) {
         std::cout << "O";
-      } else if (maze.getTile(i, j).isPassable()) {
-        if (dynamic_cast<maze::FoodTile *>(&maze.getTile(i, j))) {
+      } else if (maze.getTile(i, j)->isPassable()) {
+        if (std::dynamic_pointer_cast<maze::FoodTile>(maze.getTile(i, j))) {
           std::cout << "F";
-        } else if (dynamic_cast<maze::DoorTile *>(&maze.getTile(i, j))) {
+        } else if (std::dynamic_pointer_cast<maze::DoorTile>(maze.getTile(i, j))) {
           std::cout << "D";
         } else {
           std::cout << ".";
