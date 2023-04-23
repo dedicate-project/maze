@@ -5,6 +5,9 @@ project(maze
   DESCRIPTION "Maze generator, simulator, and solver"
   HOMEPAGE_URL "https://github.com/dedicate-project/maze/")
 
+# Build options
+option(MAZE_BUILD_TESTS "Whether to build tests or not" YES)
+
 # Set C++17 standard
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -26,6 +29,29 @@ target_include_directories(${PROJECT_NAME} PUBLIC
 add_executable(${PROJECT_NAME}-bin src/main.cpp)
 target_link_libraries(${PROJECT_NAME}-bin ${PROJECT_NAME})
 set_target_properties(${PROJECT_NAME}-bin PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+
+# Testing
+if (MAZE_BUILD_TESTS)
+  enable_testing()
+
+  add_library(tests_main tests/tests_main.cpp)
+  target_include_directories(tests_main PUBLIC 3rdparty/Catch2/single_include)
+  target_link_libraries(tests_main PUBLIC ${PROJECT_NAME})
+
+  macro(declare_test name)
+    message(STATUS "Add test: ${name}")
+    add_executable(test_${name} tests/${name}.cpp)
+    target_include_directories(test_${name} PUBLIC 3rdparty/Catch2/single_include)
+    target_link_libraries(test_${name} PUBLIC tests_main)
+
+    set_target_properties(test_${name}
+      PROPERTIES
+      RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin/tests)
+    add_test(NAME test_${name} COMMAND test_${name})
+  endmacro()
+
+  declare_test(maze)
+endif(MAZE_BUILD_TESTS)
 
 # Configure installation process
 include(GNUInstallDirs)
