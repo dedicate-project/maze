@@ -50,13 +50,14 @@ Maze::Maze(const std::vector<std::vector<PerceivedTile>>& maze_layout)
       switch (tile) {
       case PerceivedTile::START: {
         start_pos_ = {row, col};
-        grid_[row * cols + col] = std::make_shared<WallTile>();
+        player_pos_ = start_pos_;
+        grid_[row * cols + col] = std::make_shared<EmptyTile>();
         has_start = true;
       } break;
 
       case PerceivedTile::END: {
         end_pos_ = {row, col};
-        grid_[row * cols + col] = std::make_shared<WallTile>();
+        grid_[row * cols + col] = std::make_shared<EmptyTile>();
         has_end = true;
       } break;
 
@@ -260,12 +261,12 @@ bool Maze::lineOfSight(int startX, int startY, int endX, int endY) const {
   int error = diffX - diffY;
 
   while (true) {
-    if (blocksLineOfSight(grid_[startY * cols_ + startX])) {
-      return false;
-    }
-
     if (startX == endX && startY == endY) {
       break;
+    }
+
+    if ((startX != endX || startY != endY) && blocksLineOfSight(grid_[startY * cols_ + startX])) {
+      return false;
     }
 
     int error2 = error * 2;
@@ -319,11 +320,15 @@ std::vector<std::vector<Maze::PerceivedTile>> Maze::perceiveTiles(uint32_t radiu
   }
 
   const uint32_t squaredRadius = radius * radius;
-  for (int32_t row = player_pos_.row - radius; row <= player_pos_.row + radius; ++row) {
+  const int32_t start_row = player_pos_.row - radius;
+  const int32_t end_row = player_pos_.row + radius;
+  for (int32_t row = start_row; row <= end_row; ++row) {
     if (row < 0 || row >= rows_) {
       continue;
     }
-    for (int32_t col = player_pos_.col - radius; col <= player_pos_.col; ++col) {
+    const int32_t start_col = player_pos_.col - radius;
+    const int32_t end_col = player_pos_.col + radius;
+    for (int32_t col = start_col; col <= end_col; ++col) {
       if (col < 0 || col >= cols_) {
         continue;
       }
@@ -336,20 +341,23 @@ std::vector<std::vector<Maze::PerceivedTile>> Maze::perceiveTiles(uint32_t radiu
         continue;
       }
 
+      int32_t rel_row = row - start_row;
+      int32_t rel_col = col - start_col;
+      auto& current_perceived_tile = perceived_rows[rel_row][rel_col];
       if (start_pos_.row == row && start_pos_.col == col) {
-        perceived_rows[row][col] = PerceivedTile::START;
+        current_perceived_tile = PerceivedTile::START;
       } else if (end_pos_.row == row && end_pos_.col == col) {
-        perceived_rows[row][col] = PerceivedTile::END;
+        current_perceived_tile = PerceivedTile::END;
       } else {
         const std::shared_ptr<Tile> tile = grid_[row * cols_ + col];
         if (std::dynamic_pointer_cast<WallTile>(tile)) {
-          perceived_rows[row][col] = PerceivedTile::WALL;
+          current_perceived_tile = PerceivedTile::WALL;
         } else if (std::dynamic_pointer_cast<DoorTile>(tile)) {
-          perceived_rows[row][col] = PerceivedTile::DOOR;
+          current_perceived_tile = PerceivedTile::DOOR;
         } else if (std::dynamic_pointer_cast<FoodTile>(tile)) {
-          perceived_rows[row][col] = PerceivedTile::FOOD;
+          current_perceived_tile = PerceivedTile::FOOD;
         } else if (std::dynamic_pointer_cast<EmptyTile>(tile)) {
-          perceived_rows[row][col] = PerceivedTile::EMPTY;
+          current_perceived_tile = PerceivedTile::EMPTY;
         }
       }
     }
