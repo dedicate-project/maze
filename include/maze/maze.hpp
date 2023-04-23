@@ -47,6 +47,12 @@ class Maze {
   Maze(uint32_t rows, uint32_t cols, double difficulty);
 
   /**
+   * @brief Constructs a Maze based on the layout specified.
+   * @param maze_layout The layout used to instantiate the Maze.
+   */
+  Maze(const std::vector<std::vector<PerceivedTile>>& maze_layout);
+
+  /**
    * @brief Moves the player in the specified direction.
    * @param move The direction to move the player.
    * @return True if the move was successful, false otherwise.
@@ -201,13 +207,13 @@ class Maze {
    */
   uint32_t manhattanDistance(const Coordinates& a, const Coordinates& b);
 
-  uint32_t rows; /**< The number of rows in the maze. */
-  uint32_t cols; /**< The number of columns in the maze. */
-  std::vector<std::shared_ptr<Tile>> grid; /**< The grid of tiles that make up the maze. */
-  Player player; /**< The player object. */
-  Coordinates startPos; /**< The starting position of the maze. */
-  Coordinates endPos; /**< The ending position of the maze. */
-  Coordinates playerPos; /**< The current position of the player in the maze. */
+  uint32_t rows_; /**< The number of rows in the maze. */
+  uint32_t cols_; /**< The number of columns in the maze. */
+  std::vector<std::shared_ptr<Tile>> grid_; /**< The grid of tiles that make up the maze. */
+  Player player_; /**< The player object. */
+  Coordinates start_pos_; /**< The starting position of the maze. */
+  Coordinates end_pos_; /**< The ending position of the maze. */
+  Coordinates player_pos_; /**< The current position of the player in the maze. */
 };
 
 }  // namespace maze
