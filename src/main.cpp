@@ -78,8 +78,9 @@ int main() {
     std::cout << moveToString(move) << std::endl;
   }
 
-  for (const auto &move : path) {
-    if (!maze.movePlayer(move)) {
+  for (const auto& move : path) {
+    maze.movePlayer(move);
+    if (maze.getPlayerCurrentFood() == 0) {
       std::cout << "Game over: Out of food!\n";
       break;
     }

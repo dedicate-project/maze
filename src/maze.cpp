@@ -150,20 +150,21 @@ bool Maze::movePlayer(Maze::Move move) {
   // Check if the new position is within bounds and passable.
   if (newPos.row >= 0 && newPos.row < rows_ && newPos.col >= 0 && newPos.col < cols_ &&
       grid_[newPos.row * cols_ + newPos.col]->isPassable()) {
-    auto tile = grid_[newPos.row * cols_ + newPos.col].get();
+    auto tile = grid_[newPos.row * cols_ + newPos.col];
 
     // Handle special tiles.
-    if (FoodTile* foodTile = dynamic_cast<FoodTile*>(tile)) {
+    if (std::shared_ptr<FoodTile> foodTile = std::dynamic_pointer_cast<FoodTile>(tile)) {
       player_.pickFood(foodTile->getWeight());
       grid_[newPos.row * cols_ + newPos.col] = std::make_shared<EmptyTile>();
     }
 
     // Move the player and consume food.
     player_pos_ = newPos;
-    return player_.consumeFood(1);
+    player_.consumeFood(1);
+    return true;
   }
 
-  return true;
+  return false;
 }
 
 bool Maze::isSolvable() {
