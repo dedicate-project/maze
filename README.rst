@@ -17,16 +17,29 @@ and how much food is available) can easily be set via parameters.
 Usage
 -----
 
+The project pulls in Catch2 as a git submodule for the unit tests. Make sure submodules are
+initialised before configuring:
+
+.. code-block:: bash
+
+    git submodule update --init --recursive
+
 To build the project, navigate to the root directory of the project and run the following commands:
 
 .. code-block:: bash
 
-    mkdir build
-    cd build
-    cmake ..
-    make
+    cmake -S . -B build
+    cmake --build build -j
 
-This will create the ``maze-bin`` executable in the ``bin`` directory of the build directory.
+This will create the ``maze-bin`` executable in the ``build/bin`` directory.
+
+To run the unit test suite:
+
+.. code-block:: bash
+
+    ctest --test-dir build --output-on-failure
+
+If you don't want to build the tests, pass ``-DMAZE_BUILD_TESTS=OFF`` at configure time.
 
 Library
 -------

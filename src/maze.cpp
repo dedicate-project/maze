@@ -1,8 +1,12 @@
 #include <maze/maze.hpp>
 
 // Standard
+#include <algorithm>
 #include <cmath>
+#include <cstdlib>
+#include <functional>
 #include <stdexcept>
+#include <unordered_map>
 
 namespace maze {
 
@@ -16,6 +20,13 @@ int squaredDistance(int x1, int y1, int x2, int y2) {
 
 Maze::Maze(uint32_t rows, uint32_t cols, double difficulty)
   : rows_(rows), cols_(cols), player_(100) {
+  // generateMaze() expects at least a 3x3 grid (it carves from the (1,1) interior cell and
+  // indexes (rows_ - 2) when placing extra walls/food). Anything smaller would underflow or
+  // crash. We reject early with a clear error rather than letting users discover this via
+  // a segfault in std::shuffle or grid_[].
+  if (rows < 3 || cols < 3) {
+    throw std::invalid_argument("A generated maze must be at least 3x3.");
+  }
   grid_.resize(static_cast<std::vector<int>::size_type>(rows) * cols);
   generateMaze(difficulty);
 }
@@ -77,9 +88,6 @@ Maze::Maze(const std::vector<std::vector<PerceivedTile>>& maze_layout)
       case PerceivedTile::EMPTY: {
         grid_[row * cols + col] = std::make_shared<EmptyTile>();
       } break;
-
-      default:
-        break;
       }
       col++;
     }
@@ -114,7 +122,8 @@ bool Maze::isEndAt(uint32_t row, uint32_t col) const {
 }
 
 bool Maze::isInBounds(uint32_t row, uint32_t col) const {
-  return row >= 0 && row < rows_ && col >= 0 && col < cols_;
+  // row and col are uint32_t so the `>= 0` checks the original code had were always true.
+  return row < rows_ && col < cols_;
 }
 
 uint32_t Maze::getRows() const {
@@ -130,41 +139,42 @@ uint32_t Maze::getPlayerCurrentFood() const {
 }
 
 bool Maze::movePlayer(Maze::Move move) {
-  // Calculate the new position based on the move.
-  Coordinates newPos = player_pos_;
+  // Compute the candidate position in signed arithmetic. The previous version decremented
+  // `Coordinates::col` / `Coordinates::row` (uint32_t) directly, so moves off the top or
+  // left edge wrapped to ~4 billion and the subsequent `>= 0` guard (always true for
+  // unsigned) let the out-of-bounds index reach `grid_[...]->isPassable()` -- a crash.
+  int64_t new_row = static_cast<int64_t>(player_pos_.row);
+  int64_t new_col = static_cast<int64_t>(player_pos_.col);
   switch (move) {
-  case Move::LEFT:
-    newPos.col--;
-    break;
-  case Move::RIGHT:
-    newPos.col++;
-    break;
-  case Move::UP:
-    newPos.row--;
-    break;
-  case Move::DOWN:
-    newPos.row++;
-    break;
+  case Move::LEFT:  --new_col; break;
+  case Move::RIGHT: ++new_col; break;
+  case Move::UP:    --new_row; break;
+  case Move::DOWN:  ++new_row; break;
   }
 
-  // Check if the new position is within bounds and passable.
-  if (newPos.row >= 0 && newPos.row < rows_ && newPos.col >= 0 && newPos.col < cols_ &&
-      grid_[newPos.row * cols_ + newPos.col]->isPassable()) {
-    auto tile = grid_[newPos.row * cols_ + newPos.col];
-
-    // Handle special tiles.
-    if (std::shared_ptr<FoodTile> foodTile = std::dynamic_pointer_cast<FoodTile>(tile)) {
-      player_.pickFood(foodTile->getWeight());
-      grid_[newPos.row * cols_ + newPos.col] = std::make_shared<EmptyTile>();
-    }
-
-    // Move the player and consume food.
-    player_pos_ = newPos;
-    player_.consumeFood(1);
-    return true;
+  if (new_row < 0 || new_col < 0 ||
+      new_row >= static_cast<int64_t>(rows_) || new_col >= static_cast<int64_t>(cols_)) {
+    return false;
   }
 
-  return false;
+  const Coordinates newPos{static_cast<uint32_t>(new_row), static_cast<uint32_t>(new_col)};
+  if (!grid_[newPos.row * cols_ + newPos.col]->isPassable()) {
+    return false;
+  }
+
+  // Handle special tiles before moving so the food pickup is accounted for first.
+  auto tile = grid_[newPos.row * cols_ + newPos.col];
+  if (std::shared_ptr<FoodTile> foodTile = std::dynamic_pointer_cast<FoodTile>(tile)) {
+    player_.pickFood(foodTile->getWeight());
+    grid_[newPos.row * cols_ + newPos.col] = std::make_shared<EmptyTile>();
+  }
+
+  // Move the player and consume food. The return value of consumeFood is intentionally
+  // ignored here: callers observe starvation by checking getPlayerCurrentFood() before the
+  // next move (matches the BEAST MazeEvaluator's contract).
+  player_pos_ = newPos;
+  static_cast<void>(player_.consumeFood(1));
+  return true;
 }
 
 bool Maze::isSolvable() {
@@ -232,7 +242,11 @@ std::vector<Maze::Move> Maze::solve() {
           localGrid[neighbor.row * cols_ + neighbor.col] = std::make_shared<EmptyTile>();
         }
 
-        if (food <= 0) {
+        // Allow reaching the neighbor with exactly zero food. The previous threshold
+        // (`food <= 0`) skipped the final move when the player would arrive at the goal
+        // with their last unit of food spent -- which is a *legal* finishing move under
+        // movePlayer's rules. We only skip when food would go strictly negative.
+        if (food < 0) {
           continue;
         }
 
